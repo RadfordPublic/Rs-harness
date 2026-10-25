@@ -6,7 +6,7 @@ import { helpers } from './lib';
 // Wilderness green dragons (~level 37 Wilderness, members). Only five spawn on this server, all at
 // (3078..3118, 3810..3821), respawn 60 ticks. Level 79, 75 HP, weakest to stab (stab def 20, slash/crush 40).
 // The anti-dragon shield ("Dragonfire shield", antidragonbreathshield) caps the fire; without it the
-// breath can hit 50. Every kill drops dragon bones + a green dragonhide: bury the bones, bank the hides.
+// breath can hit 50. Every kill drops dragon bones + a hide (plain "Dragonhide" here): bury the bones, bank the hides.
 // Banks at Edgeville. Leaves when food runs low or the inventory fills. Progress in dragon_progress.json.
 //   FOOD=18 TRIPS=1 bun bots/sam/green_dragons.ts
 const FOOD = Number(process.env.FOOD ?? 18);
@@ -23,7 +23,7 @@ const inLair = (x: number, z: number) => x >= 3065 && x <= 3130 && z >= 3800 && 
 const SHIELD = /^(dragonfire|anti-dragon) shield$/i;
 const KEEP = /^(dragonfire shield|anti-dragon shield|silverlight|.*longsword|.*scimitar|lobster)$/i;
 // Hides and anything worth more than a few gp from the drop table; bones are buried straight away.
-const LOOT = /^(dragon bones|green dragonhide|.*rune$|nature rune|law rune|rune dagger|adamant full helm|mithril kiteshield|steel platelegs|grimy .*|uncut .*|coins)$/i;
+const LOOT = /^(dragon bones|dragonhide|.*rune$|nature rune|law rune|rune dagger|adamant full helm|mithril kiteshield|steel platelegs|grimy .*|uncut .*|coins)$/i;
 
 const PROGRESS = join(import.meta.dir, 'dragon_progress.json');
 type Progress = { kills: number; hides: number; buried: number; trips: number; deaths: number };
@@ -74,11 +74,11 @@ await runScript(async ({ bot, sdk }) => {
         await h.walk(BANK, 'edgeville bank');
         const o = await bot.openBank();
         if (!o.success) { console.log('bank failed:', o.message); return false; }
-        const hides = h.count(/green dragonhide/i);
+        const hides = h.count(/^dragonhide$/i);
         for (const n of [...new Set(sdk.getInventory().filter(i => !KEEP.test(i.name)).map(i => i.name))]) {
             await bot.depositItem(new RegExp(`^${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'), -1);
         }
-        p.hides += hides - h.count(/green dragonhide/i);
+        p.hides += hides - h.count(/^dragonhide$/i);
         if (!h.has(SHIELD) && !sdk.getEquipment().some(e => SHIELD.test(e.name))) await bot.withdrawItem(SHIELD, 1).catch(() => {});
         const need = FOOD - h.count(/^lobster$/i);
         if (need > 0) await bot.withdrawItem(/^lobster$/i, need).catch(() => {});
@@ -131,7 +131,7 @@ await runScript(async ({ bot, sdk }) => {
                 p.kills++;
                 await loot(tx, tz);
                 save();
-                console.log(`kill ${p.kills}: hp ${me().hp}, food ${h.count(/^lobster$/i)}, hides ${h.count(/green dragonhide/i)}`);
+                console.log(`kill ${p.kills}: hp ${me().hp}, food ${h.count(/^lobster$/i)}, hides ${h.count(/^dragonhide$/i)}`);
             }
         }
         return 'no dragons';

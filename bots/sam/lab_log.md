@@ -119,3 +119,33 @@
   shield, gloves, hammer, 101gp. Sailing resets the hull (`%dragonquestvar = 0`), so a second trip needs
   3 more planks + 12 more nails, re-hiring Ned ("Can you take me to Crandor again?"), and a new shield
   from the Duke. Next time: real food (lobsters/swordfish), better armour, and check the prayer is on.
+
+## Session 4 (2026-10-26): lobsters, Crandor rebuild, green dragon plan
+
+### Observations
+- Lobsters (`lobsters.ts`): Catherby has Harry's shop (net, lobster pot), net and cage spots, a range
+  and a bank all within ~40 tiles. Falador -> Catherby goes over White Wolf Mountain (route in the file).
+  Fishing 1 -> 67 and 36 cooked lobsters in about an hour at 25x XP.
+- Catherby has a net spot that can't be reached: filter on `reachable` and skip any spot that gave
+  nothing in the last 60s, or the script clicks it forever.
+- Fishing: `player.animId` flickers on and off while waiting on a lobster, so it doesn't show whether
+  fishing has started. Check for the "You attempt to catch" message instead, then allow up to 45s for
+  the catch. Clicking a spot from 8+ tiles away often does nothing, so walk next to it first.
+- Mining with a bronze pickaxe: `mineRock` gives up on coal ("no ore") and gets "Mining operation was
+  rejected" on iron. Clicking Mine and waiting up to 40s for the ore count to rise (`mineSlow` in
+  `nails.ts`) works for both.
+- **Dragon Slayer complete** on the second trip. The redo: new shield from the Duke, 3 planks, 12 nails,
+  hammer and 21 lobsters from Draynor bank, patch the hull, then "Can you take me to Crandor again?".
+  The sail step has to climb down the ladder at (3049, 3208) to find Ned on level 3. Elvarg went down
+  with sam on 39 HP and 8 lobsters eaten. Protect from Melee was confirmed on (the retry loop) and the
+  shield took every breath. The quest completes on the kill.
+- Getting home from Elvarg (`STEP=home`): the pathfinder can't route out. Open the secret door at
+  (2836, 9600), take the Karamja volcano rope at (2856, 9569), whose only option is "Climb", then the
+  Musa Point customs officer: "Can I journey on this ship?", "Search away, I have nothing to hide.",
+  "Ok.". That's 30gp and lands at Port Sarim (3029, 3217).
+- Hammers: Arhein in Catherby (2803, 3430) sells them, as do the Falador general store and the
+  Dwarven Mine shops.
+- Green dragons (`green_dragons.ts`), from the server data: only 5 spawn, (3078, 3810), (3092, 3810),
+  (3098, 3821), (3107, 3812) and (3118, 3820), around Wilderness level 37. Level 79, 75 HP, attack,
+  strength and defence 68. Stab defence is 20 (slash and crush 40), so use a stab style. Respawn is
+  60 ticks. Every kill drops dragon bones + a green dragonhide.

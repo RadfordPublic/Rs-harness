@@ -126,6 +126,13 @@ await runScript(async ({ bot, sdk }) => {
         },
     };
 
+    async function mineSlow(rock: Awaited<ReturnType<typeof sdk.scanNearbyLocs>>[number], item: RegExp) {
+        const n = h.count(item);
+        await bot.interactLoc(rock, /^mine$/i);
+        const ok = await sdk.waitForCondition(() => h.count(item) > n, 40_000).then(() => true, () => false);
+        return { success: ok, reason: ok ? 'ok' : 'no ore in 40s', message: '' };
+    }
+
     async function mineOre(ore: string, n: number) {
         const item = ore === 'clay' ? /^clay$/i : new RegExp(`^${ore}( ore)?$`, 'i');
         await toMine();
@@ -138,7 +145,8 @@ await runScript(async ({ bot, sdk }) => {
             const rocks = (await sdk.scanNearbyLocs(14)).filter(l => new RegExp(`${ore}`, 'i').test(l.name) && l.reachable !== false
                 && (skip.get(`${l.x},${l.z}`) ?? 0) < Date.now()).sort((a, b) => a.distance - b.distance);
             if (!rocks.length) { fails++; await sdk.waitForTicks(5); continue; }
-            const r = await bot.mineRock(rocks[0], { timeout: 20_000 });
+            // mineRock gives up on coal (and gets "rejected" on iron) before a bronze pickaxe gets any: click Mine and wait instead.
+            const r = ore === 'coal' || ore === 'iron' ? await mineSlow(rocks[0], item) : await bot.mineRock(rocks[0], { timeout: 20_000 });
             if (!r.success) { fails++; skip.set(`${rocks[0].x},${rocks[0].z}`, Date.now() + 30_000); console.log(`  ${rocks[0].x},${rocks[0].z}: ${r.reason} ${r.message ?? ""}`); }
         }
         console.log(`${ore}: ${h.count(item)} | mining ${mining()}`);

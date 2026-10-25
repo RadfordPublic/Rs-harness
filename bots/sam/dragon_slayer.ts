@@ -29,6 +29,7 @@ const ORACLE = { x: 3015, z: 3503 };         // Ice Mountain summit
 const TRAPDOOR = { x: 3019, z: 3451 };       // Dwarven Mine (3019, 3450) -> ladder (3019, 9850)
 const MAGIC_DOOR = { x: 3050, z: 9840 };     // (3051, 9840); the map chest is at (3057, 9841)
 const EDGE_BANK = { x: 3094, z: 3492 };
+const DRAYNOR_BANK = { x: 3092, z: 3245 };   // closest to the ship and Ned
 const RANGE = { x: 3018, z: 3237 };          // Port Sarim range (3019, 3237)
 const KLARENSE = { x: 3046, z: 3203 };       // Port Sarim docks, next to the Lady Lumbridge
 const NED = { x: 3100, z: 3257 };            // Draynor
@@ -163,24 +164,17 @@ await runScript(async ({ bot, sdk }) => {
             await bot.closeShop();
         },
 
-        // Phase C: everything for the trip out of the bank, then food cooked on the Port Sarim range.
+        // Phase C: everything for the trip out of the bank, lobsters in every slot left (lobsters.ts).
         async prep() {
-            await h.walk(EDGE_BANK, 'edgeville bank');
+            await h.walk(DRAYNOR_BANK, 'draynor bank');
             await bot.openBank();
-            for (const n of ['Coins', 'Hammer', 'Nails', 'Crandor map', 'Dragonfire shield']) {
+            for (const n of ['Coins', 'Hammer', 'Nails', 'Plank', 'Crandor map', 'Dragonfire shield']) {
                 if (!h.has(new RegExp(`^${n}$`, 'i'))) console.log(`${n}:`, (await bot.withdrawItem(new RegExp(`^${n}$`, 'i'), -1)).success);
             }
-            const beef = Math.max(0, h.freeSlots() - 2);
-            console.log('raw beef:', (await bot.withdrawItem(/^raw beef$/i, beef)).success, h.count(/^raw beef$/i));
+            // Planks and nails go into the hull, so leave those slots for nothing else.
+            console.log('lobsters:', (await bot.withdrawItem(/^lobster$/i, h.freeSlots())).success, h.count(/^lobster$/i));
             await bot.closeBank();
-            await h.walk(RANGE, 'port sarim range', 1);
-            const range = (await sdk.scanNearbyLocs(6)).find(l => /^range$/i.test(l.name));
-            for (let i = 0; i < 40 && range && h.has(/^raw beef$/i); i++) {
-                const n = h.count(/^raw beef$/i);
-                await bot.useItemOnLoc(/^raw beef$/i, range);
-                await sdk.waitForCondition(() => h.count(/^raw beef$/i) < n, 6_000).catch(() => {});
-            }
-            console.log('food:', h.count(/cooked meat/i), '| coins', h.count(/^coins$/i), 'nails', h.count(/nails/i), 'planks', h.count(/^plank$/i));
+            console.log('food:', h.count(/^lobster$/i), '| coins', h.count(/^coins$/i), 'nails', h.count(/nails/i), 'planks', h.count(/^plank$/i));
         },
 
         async ship() {
@@ -220,7 +214,7 @@ await runScript(async ({ bot, sdk }) => {
             const door = (await sdk.scanNearbyLocs(6)).filter(l => /door/i.test(l.name) && l.optionsWithIndex.some(o => /^open$/i.test(o.text)))
                 .sort((a, b) => a.distance - b.distance)[0];
             if (door && sdk.findNearbyNpc(/^ned$/i)?.reachable === false) { await bot.openDoor(door); await sdk.waitForTicks(2); }
-            await h.talk(/^ned$/i, [/could you take me to the island of crandor/i, /^yes/i, /you're a sailor/i]);
+            await h.talk(/^ned$/i, [/could you take me to the island of crandor/i, /take me to crandor again/i, /^yes/i, /you.re a sailor/i]);
         },
 
         async sail() {
@@ -228,10 +222,45 @@ await runScript(async ({ bot, sdk }) => {
             const plank = (await sdk.scanNearbyLocs(5)).find(l => /gangplank/i.test(l.name));
             if (plank && sdk.getState()!.player.level === 0) await bot.interactLoc(plank, new RegExp(plank.optionsWithIndex[0].text, 'i'));
             await sdk.waitForTicks(4);
+            // Ned's sailing copy is on level 3: the ladder down at (3049, 3208) lands there.
+            if (!sdk.findNearbyNpc(/^ned$/i)) {
+                const ladder = (await sdk.scanNearbyLocs(6)).find(l => /ladder/i.test(l.name) && l.x === 3049 && l.z === 3208);
+                if (ladder) { await bot.interactLoc(ladder, new RegExp(ladder.optionsWithIndex[0].text, 'i')); await sdk.waitForTicks(4); }
+                console.log('after ladder:', h.pos(), 'ned?', !!sdk.findNearbyNpc(/^ned$/i));
+            }
             await h.talk(/^ned$/i, [/yep lets go/i]);
             await sdk.waitForCondition(s => s.player.worldX < 2900, 30_000).catch(() => {});
             await h.chat();
             console.log('arrived?', h.pos());
+        },
+
+        // Back from Elvarg's lair: the secret door (2836, 9600) opens once the quest is done, then the
+        // Karamja volcano rope (2856, 9569) and the Musa Point boat to Port Sarim (30gp).
+        async home() {
+            while (sdk.getState()!.player.hp < 60 && h.has(/^lobster$/i)) await bot.eatFood(/^lobster$/i);
+            if (sdk.getState()!.player.worldZ > 9000) {
+                await h.walk({ x: 2836, z: 9601 }, 'secret door', 1);
+                const door = (await sdk.scanNearbyLocs(4)).find(l => l.x === 2836 && l.z === 9600);
+                if (door) { await bot.interactLoc(door, new RegExp(door.optionsWithIndex[0].text, 'i')); await sdk.waitForTicks(3); }
+                await h.walk({ x: 2856, z: 9570 }, 'volcano rope', 1);
+                // The rope's only option is plain "Climb", which climb() doesn't match.
+                const rope = (await sdk.scanNearbyLocs(4)).find(l => /climbing rope/i.test(l.name));
+                if (rope) await bot.interactLoc(rope, /^climb$/i);
+                await sdk.waitForCondition(s => s.player.worldZ < 9000, 10_000).catch(() => {});
+                await sdk.waitForTicks(2);
+            }
+            if (sdk.getState()!.player.worldX < 3000) {
+                await h.walk({ x: 2954, z: 3149 }, 'customs officer', 2);
+                await h.talk(/customs officer/i, [/can i journey on this ship/i, /search away/i, /^ok\.?$/i]);
+                await sdk.waitForCondition(s => s.player.worldX > 3000, 30_000).catch(() => {});
+                await h.chat();
+                if (sdk.getState()!.player.level > 0) {
+                    const plank = (await sdk.scanNearbyLocs(6)).find(l => /gangplank/i.test(l.name));
+                    if (plank) await bot.interactLoc(plank, new RegExp(plank.optionsWithIndex[0].text, 'i'));
+                    await sdk.waitForCondition(s => s.player.level === 0, 6_000).catch(() => {});
+                }
+            }
+            console.log('home:', h.pos());
         },
 
         async elvarg() {
@@ -248,9 +277,12 @@ await runScript(async ({ bot, sdk }) => {
             const gate = (await sdk.scanNearbyLocs(5)).find(l => /gate/i.test(l.name) && l.x === 2847);
             if (gate) { await bot.interactLoc(gate, /open/i); await sdk.waitForTicks(3); }
             // Elvarg's melee is the bigger threat once the shield takes the fire (max 10, elvarg.rs2).
-            if (!sdk.isPrayerActive('protect_from_melee')) await sdk.sendTogglePrayer('protect_from_melee');
-            for (let i = 0; i < 40 && completes() === before; i++) {
-                if (sdk.getState()!.player.hp < 45 && h.has(/cooked meat/i)) { await bot.eatFood(/cooked meat/i); continue; }
+            // Last time the prayer wasn't on when it mattered: retry until the state says it is.
+            for (let i = 0; i < 5 && !sdk.isPrayerActive('protect_from_melee'); i++) { await sdk.sendTogglePrayer('protect_from_melee'); await sdk.waitForTicks(2); }
+            console.log('protect from melee:', sdk.isPrayerActive('protect_from_melee'), '| prayer', sdk.getSkill('Prayer')?.level);
+            for (let i = 0; i < 80 && completes() === before; i++) {
+                if (sdk.getState()!.player.hp < 50 && h.has(/^lobster$/i)) { await bot.eatFood(/^lobster$/i); continue; }
+                if (!h.has(/^lobster$/i) && sdk.getState()!.player.hp < 40) { console.log('out of lobsters, stopping'); break; }
                 const e = sdk.findNearbyNpc(/elvarg/i);
                 if (!e) { await sdk.waitForTicks(3); continue; }
                 if (!sdk.getState()!.player.combat.inCombat) await bot.attack(e);
@@ -258,7 +290,7 @@ await runScript(async ({ bot, sdk }) => {
             }
             await sdk.waitForCondition(() => completes() > before, 15_000).catch(() => {});
             await h.chat();
-            console.log(completes() > before ? 'QUEST COMPLETE' : 'not complete?', 'hp', sdk.getState()!.player.hp, 'food', h.count(/cooked meat/i));
+            console.log(completes() > before ? 'QUEST COMPLETE' : 'not complete?', 'hp', sdk.getState()!.player.hp, 'food', h.count(/^lobster$/i));
         },
 
         async oracle() { await h.walk(ORACLE, 'oracle'); await h.talk(/oracle/i, [/seek a piece of the map/i]); },
