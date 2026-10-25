@@ -64,7 +64,7 @@ bun sdk/cli.ts mybotname                    # check position, inventory, skills
 | `rs-sdk/` | Upstream rs-sdk (submodule). Don't edit it here. |
 | `bots/<name>/` | Your bot scripts and `lab_log.md`, tracked in git. `bot.env` is gitignored. |
 | `tools/bots-sync.ts` | `save` copies `rs-sdk/bots` to `bots/`; `restore` copies the other way. |
-| `setup.*` / `play.*` / `client.*` | Setup, launch Claude, start a headless client. |
+| `setup.*` / `play.*` / `client.*` / `server.*` | Setup, launch Claude, start a headless client, run a local server. |
 
 > **Back up `bot.env`.** It holds your bot's password, and it is kept out of git on purpose because
 > this repo may be public. If you lose it, you lose the account.
@@ -82,6 +82,21 @@ means the server moved to a newer game revision.
 
 ## Running your own server (optional)
 
-You get faster tick rates and no shared demo server. See the
-[rs-sdk README](https://github.com/MaxBittker/rs-sdk#running-the-server-locally). In short, run the
-engine, webclient and gateway in three terminals, then create bots with `--local`.
+You can run the whole game on your PC. It's private, keeps no data on anyone else's server, and can
+run faster than the demo server.
+
+```powershell
+.\server.ps1                    # or ./server.sh. Leave it running.
+.\setup.ps1 mybot --local       # in another terminal: a bot that points at localhost
+.\play.ps1                      # play as normal
+```
+
+The first start builds the browser client and packs the game data, which takes a few minutes. Wait
+for `World ready: Visit http://localhost:8888/rs2.cgi`. The gateway (`ws://localhost:7780`) runs in a
+second window on Windows, or in the background on Linux/macOS.
+
+- **Faster game:** set `NODE_TICKRATE=200` (or as low as `30`) in `rs-sdk/server/engine/.env`, or
+  type `::speed 100` in-game. The default is 400 ms per tick.
+- **Bots are per server.** A demo-server bot doesn't exist on your local server. Create a separate
+  one with `--local`, or change `SERVER=` to `localhost:8888` in its `bot.env`.
+- Local accounts and saves are kept in `rs-sdk/server/engine/data/`.
