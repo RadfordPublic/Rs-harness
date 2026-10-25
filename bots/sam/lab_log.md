@@ -84,3 +84,24 @@
   twice (once undoing the mouse door, once taking the ball). After the shapeshifter is dead the shed
   opens without the key and the ball can be picked up again (`STEP=reball`).
 - Cooked beef from the banked raw beef is the food supply (`cook_food.ts`, Port Sarim range).
+
+## Session 3 (2026-10-26): Dragon Slayer
+
+### Observations
+- Guildmaster is "Guild master". Oziach: `chat()` takes the first *option* that matches any pattern,
+  and "Where can I get an antidragon shield?" is listed first, so ask about each map piece in its own
+  chat. The first piece's answer hands over the Maze key. The shield is called "Dragonfire shield".
+- Melzar's Maze: route in `melzars_maze.ts`. Keys all drop as plain "Key" and every keeper drops one
+  per kill. `funladdertop` (2932, 3240) is the way into the cellar (+6400 z), not a trap. A tile can
+  hold a door and a ladder, so pick the loc by its option.
+- Wormbrain: wind strike through the bars, then Telekinetic Grab (spell component 1168, not in
+  `sdk/spells.ts`) on the map part. Law runes aren't sold anywhere reachable (Magic Guild / Mage
+  Arena); Taverley Dungeon chaos druids gave 4 in 18 kills.
+- Magic 31 -> 33 took ~7 wind strikes on Port Sarim men (25x XP); I overbought runes (~90 casts left).
+- Oracle door: mind bomb (Rising Sun barmaid, "I'll try the Mind Bomb."), silk (Thessalia), lobster
+  pot (Gerrant), unfired bowl (clay from Rimmington mine, wet with a bucket from Hetty's sink, Barbarian
+  Village potter's wheel; the Falador-south wheels are inside the Crafting Guild). Chest needed a few
+  Search clicks. Parts combine into "Crandor map".
+- Still to do: 2000gp ship (sam has ~850), 3 planks (only spawns are Crandor and low Wilderness
+  ~(3148-3182, 3659-3680)), 12 steel nails (4 per plank, smithing 34 makes 2 per steel bar, no shop
+  sells them), Ned, then Elvarg.
