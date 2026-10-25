@@ -64,7 +64,7 @@ bun sdk/cli.ts mybotname                    # check position, inventory, skills
 | `rs-sdk/` | Upstream rs-sdk (submodule). Don't edit it here. |
 | `bots/<name>/` | Your bot scripts and `lab_log.md`, tracked in git. `bot.env` is gitignored. |
 | `tools/bots-sync.ts` | `save` copies `rs-sdk/bots` to `bots/`; `restore` copies the other way. |
-| `setup.*` / `play.*` / `client.*` / `server.*` | Setup, launch Claude, start a headless client, run a local server. |
+| `setup.*` / `play.*` / `client.*` / `server.*` / `watch.*` | Setup, launch Claude, start a headless client, run a local server, open a bot in your browser. |
 
 > **Back up `bot.env`.** It holds your bot's password, and it is kept out of git on purpose because
 > this repo may be public. If you lose it, you lose the account.

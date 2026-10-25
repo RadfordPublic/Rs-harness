@@ -31,6 +31,8 @@ const bots = entries.filter(e => e.isDirectory() && !e.name.startsWith('_') && !
 for (const bot of bots) {
     await cp(join(from, bot.name), join(to, bot.name), {
         recursive: true,
+        // Bun's cp stops overwriting existing files once a filter is set unless force is explicit.
+        force: true,
         filter: src => !src.includes('node_modules'),
     });
     console.log(`${mode === 'save' ? 'saved' : 'restored'} ${bot.name}`);
