@@ -65,6 +65,7 @@ bun sdk/cli.ts mybotname                    # check position, inventory, skills
 | `bots/<name>/` | Your bot scripts and `lab_log.md`, tracked in git. `bot.env` is gitignored. |
 | `tools/bots-sync.ts` | `save` copies `rs-sdk/bots` to `bots/`; `restore` copies the other way. |
 | `setup.*` / `play.*` / `client.*` / `server.*` / `watch.*` | Setup, launch Claude, start a headless client, run a local server, open a bot in your browser. |
+| `share.*` | Share your local server with friends over Tailscale. |
 
 > **Back up `bot.env`.** It holds your bot's password, and it is kept out of git on purpose because
 > this repo may be public. If you lose it, you lose the account.
@@ -100,3 +101,23 @@ second window on Windows, or in the background on Linux/macOS.
 - **Bots are per server.** A local bot doesn't exist on the demo server and vice versa. Create a
   separate one with `--demo` for the demo server, or edit `SERVER=` in its `bot.env`.
 - Local accounts and saves are kept in `rs-sdk/server/engine/data/`.
+
+### Letting friends connect (Tailscale)
+
+[Tailscale](https://tailscale.com) gives your server a private HTTPS address without opening router
+ports. The free plan covers a handful of friends.
+
+```powershell
+winget install Tailscale.Tailscale   # once, then sign in: tailscale up
+.\share.ps1                          # or ./share.sh, while server.ps1 is running
+```
+
+It prints your address, e.g. `https://mypc.tail1234.ts.net`. Invite friends to your tailnet from the
+Tailscale admin console (or share just this machine). They install Tailscale, then:
+
+- **Play in a browser:** `https://mypc.tail1234.ts.net/rs2.cgi`
+- **Run bots:** `.\setup.ps1 theirbot --server=mypc.tail1234.ts.net`
+
+`.\share.ps1 -Public` uses Tailscale Funnel instead, so anyone with the link can connect without
+installing Tailscale. `.\share.ps1 -Stop` stops sharing. Sharing only works while your PC and
+`server.ps1` are running. The first run may ask you to enable HTTPS certificates for your tailnet.
