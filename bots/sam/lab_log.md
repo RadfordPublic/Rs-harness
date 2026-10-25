@@ -102,6 +102,20 @@
   pot (Gerrant), unfired bowl (clay from Rimmington mine, wet with a bucket from Hetty's sink, Barbarian
   Village potter's wheel; the Falador-south wheels are inside the Crafting Guild). Chest needed a few
   Search clicks. Parts combine into "Crandor map".
-- Still to do: 2000gp ship (sam has ~850), 3 planks (only spawns are Crandor and low Wilderness
-  ~(3148-3182, 3659-3680)), 12 steel nails (4 per plank, smithing 34 makes 2 per steel bar, no shop
-  sells them), Ned, then Elvarg.
+- Nails (`nails.ts`): Doric's Quest (6 clay, 4 copper, 2 iron, all in the Dwarven Mine; +1 QP, and
+  its 25x Mining reward took Mining 6 -> 51) unlocks his anvils. Use the Ice Mountain trapdoor; the
+  Falador-side stairs never took us down. `smithAtAnvil` fails every other call ("interface did not
+  open"): just retry. Dwarven Mine coal kept failing; Barbarian Village coal works if you click Mine and
+  wait ~30s (bronze pickaxe). Smithing 1 -> 39 on the way.
+- Money (`money.ts`): men to Thieving 40 then Falador guards (30gp): 820 -> 2101gp in ~525 tries,
+  Thieving 23 -> 56.
+- Planks (`planks.ts`): the Wilderness spawns at (3154, 3659), (3154, 3670), (3148, 3671) all had
+  planks; banked everything at Edgeville first. No trouble.
+- Ship: Klarense "I don't suppose I could buy it?" / "Yep, sounds good." Board, ladder down, plank on
+  the hole x3 (hammer + 4 nails each). Ned: ask, then *use the map on him*. His sailing copy is on
+  level 3 of the ship (ladder down from (3049, 3208) lands there), "Yep lets go!".
+- **Elvarg killed sam.** The shield worked (fire capped at 10), but cooked meat heals 3 and sam ran out
+  of 18 of them. Kept iron chainbody, Silverlight, Ghostspeak amulet; lost the shield, helm, wooden
+  shield, gloves, hammer, 101gp. Sailing resets the hull (`%dragonquestvar = 0`), so a second trip needs
+  3 more planks + 12 more nails, re-hiring Ned ("Can you take me to Crandor again?"), and a new shield
+  from the Duke. Next time: real food (lobsters/swordfish), better armour, and check the prayer is on.

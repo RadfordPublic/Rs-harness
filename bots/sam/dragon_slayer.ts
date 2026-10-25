@@ -5,6 +5,7 @@ import { helpers } from './lib';
 // Dragon Slayer. STEP=<name>:
 //   phase A: guildmaster | oziach | shield
 //   phase B (map parts 2 and 3): mindbomb | bank | clay | lobsterpot | wormbrain | bowl | silk | oracle | door
+//   phase C (ship and Elvarg): prep | ship | repair | ned | sail | elvarg
 //   scan
 // Map part 1 is melzars_maze.ts.
 // quest_dragon + guild_master.rs2, oziach.rs2, duke_horacio.rs2. Oziach hands over the Melzar's
@@ -27,6 +28,10 @@ const THESSALIA = { x: 3205, z: 3417 };      // Varrock clothes shop (silk)
 const ORACLE = { x: 3015, z: 3503 };         // Ice Mountain summit
 const TRAPDOOR = { x: 3019, z: 3451 };       // Dwarven Mine (3019, 3450) -> ladder (3019, 9850)
 const MAGIC_DOOR = { x: 3050, z: 9840 };     // (3051, 9840); the map chest is at (3057, 9841)
+const EDGE_BANK = { x: 3094, z: 3492 };
+const RANGE = { x: 3018, z: 3237 };          // Port Sarim range (3019, 3237)
+const KLARENSE = { x: 3046, z: 3203 };       // Port Sarim docks, next to the Lady Lumbridge
+const NED = { x: 3100, z: 3257 };            // Draynor
 const TELEGRAB = 1168;                       // Telekinetic Grab spell component (between Lumbridge Teleport 1167 and Fire Bolt 1169)
 
 const CHOICES = [
@@ -156,6 +161,104 @@ await runScript(async ({ bot, sdk }) => {
             await bot.openShop(/thessalia/i);
             console.log('silk:', (await bot.buyFromShop(/^silk$/i, 1)).success);
             await bot.closeShop();
+        },
+
+        // Phase C: everything for the trip out of the bank, then food cooked on the Port Sarim range.
+        async prep() {
+            await h.walk(EDGE_BANK, 'edgeville bank');
+            await bot.openBank();
+            for (const n of ['Coins', 'Hammer', 'Nails', 'Crandor map', 'Dragonfire shield']) {
+                if (!h.has(new RegExp(`^${n}$`, 'i'))) console.log(`${n}:`, (await bot.withdrawItem(new RegExp(`^${n}$`, 'i'), -1)).success);
+            }
+            const beef = Math.max(0, h.freeSlots() - 2);
+            console.log('raw beef:', (await bot.withdrawItem(/^raw beef$/i, beef)).success, h.count(/^raw beef$/i));
+            await bot.closeBank();
+            await h.walk(RANGE, 'port sarim range', 1);
+            const range = (await sdk.scanNearbyLocs(6)).find(l => /^range$/i.test(l.name));
+            for (let i = 0; i < 40 && range && h.has(/^raw beef$/i); i++) {
+                const n = h.count(/^raw beef$/i);
+                await bot.useItemOnLoc(/^raw beef$/i, range);
+                await sdk.waitForCondition(() => h.count(/^raw beef$/i) < n, 6_000).catch(() => {});
+            }
+            console.log('food:', h.count(/cooked meat/i), '| coins', h.count(/^coins$/i), 'nails', h.count(/nails/i), 'planks', h.count(/^plank$/i));
+        },
+
+        async ship() {
+            await h.walk(KLARENSE, 'klarense');
+            await h.talk(/klarense/i, [/i don't suppose i could buy it/i, /yep, sounds good/i]);
+            console.log('coins after:', h.count(/^coins$/i));
+        },
+
+        // Board, go down to the hold, and patch the hole with planks (4 nails each, hammer).
+        async repair() {
+            if (sdk.getState()!.player.level === 0 && sdk.getState()!.player.worldZ < 9000) {
+                await h.walk({ x: 3047, z: 3204 }, 'gangplank', 1);
+                const plank = (await sdk.scanNearbyLocs(5)).find(l => /gangplank/i.test(l.name));
+                if (plank) await bot.interactLoc(plank, new RegExp(plank.optionsWithIndex[0].text, 'i'));
+                await sdk.waitForTicks(4);
+            }
+            if (sdk.getState()!.player.worldZ < 9000) await h.climb('down', /ladder/i);
+            for (let i = 0; i < 6 && h.has(/^plank$/i); i++) {
+                const hole = (await sdk.scanNearbyLocs(6)).find(l => /hole/i.test(l.name));
+                if (!hole) { await h.scan('no hole'); break; }
+                await bot.useItemOnLoc(/^plank$/i, hole);
+                await sdk.waitForTicks(3);
+                await h.chat();
+            }
+            console.log('planks left:', h.count(/^plank$/i), h.messages().slice(-2));
+            await h.climb('up', /ladder/i);
+        },
+
+        async ned() {
+            if (sdk.getState()!.player.level === 1) {   // still on deck: gangplank off at (3047, 3206)
+                const off = (await sdk.scanNearbyLocs(6)).find(l => /gangplank/i.test(l.name));
+                if (off) await bot.interactLoc(off, new RegExp(off.optionsWithIndex[0].text, 'i'));
+                await sdk.waitForCondition(s => s.player.level === 0, 6_000).catch(() => {});
+            }
+            await h.walk(NED, 'ned');
+            // His house door is often shut.
+            const door = (await sdk.scanNearbyLocs(6)).filter(l => /door/i.test(l.name) && l.optionsWithIndex.some(o => /^open$/i.test(o.text)))
+                .sort((a, b) => a.distance - b.distance)[0];
+            if (door && sdk.findNearbyNpc(/^ned$/i)?.reachable === false) { await bot.openDoor(door); await sdk.waitForTicks(2); }
+            await h.talk(/^ned$/i, [/could you take me to the island of crandor/i, /^yes/i, /you're a sailor/i]);
+        },
+
+        async sail() {
+            await h.walk({ x: 3047, z: 3204 }, 'gangplank', 1);
+            const plank = (await sdk.scanNearbyLocs(5)).find(l => /gangplank/i.test(l.name));
+            if (plank && sdk.getState()!.player.level === 0) await bot.interactLoc(plank, new RegExp(plank.optionsWithIndex[0].text, 'i'));
+            await sdk.waitForTicks(4);
+            await h.talk(/^ned$/i, [/yep lets go/i]);
+            await sdk.waitForCondition(s => s.player.worldX < 2900, 30_000).catch(() => {});
+            await h.chat();
+            console.log('arrived?', h.pos());
+        },
+
+        async elvarg() {
+            const completes = () => h.messages().filter(t => /quest complete/i.test(t)).length;
+            const before = completes();
+            if (h.has(/dragonfire shield/i)) await bot.equipItem(/dragonfire shield/i);
+            if (sdk.getState()!.player.worldZ < 9000) {
+                await h.walk({ x: 2834, z: 3256 }, 'rock opening', 1);
+                const rock = (await sdk.scanNearbyLocs(5)).find(l => l.x === 2833 && l.z === 3255);
+                if (rock) await bot.interactLoc(rock, new RegExp(rock.optionsWithIndex[0].text, 'i'));
+                await sdk.waitForCondition(s => s.player.worldZ > 9000, 10_000).catch(() => {});
+            }
+            await h.walk({ x: 2845, z: 9636 }, 'elvarg gate', 1);
+            const gate = (await sdk.scanNearbyLocs(5)).find(l => /gate/i.test(l.name) && l.x === 2847);
+            if (gate) { await bot.interactLoc(gate, /open/i); await sdk.waitForTicks(3); }
+            // Elvarg's melee is the bigger threat once the shield takes the fire (max 10, elvarg.rs2).
+            if (!sdk.isPrayerActive('protect_from_melee')) await sdk.sendTogglePrayer('protect_from_melee');
+            for (let i = 0; i < 40 && completes() === before; i++) {
+                if (sdk.getState()!.player.hp < 45 && h.has(/cooked meat/i)) { await bot.eatFood(/cooked meat/i); continue; }
+                const e = sdk.findNearbyNpc(/elvarg/i);
+                if (!e) { await sdk.waitForTicks(3); continue; }
+                if (!sdk.getState()!.player.combat.inCombat) await bot.attack(e);
+                await sdk.waitForTicks(3);
+            }
+            await sdk.waitForCondition(() => completes() > before, 15_000).catch(() => {});
+            await h.chat();
+            console.log(completes() > before ? 'QUEST COMPLETE' : 'not complete?', 'hp', sdk.getState()!.player.hp, 'food', h.count(/cooked meat/i));
         },
 
         async oracle() { await h.walk(ORACLE, 'oracle'); await h.talk(/oracle/i, [/seek a piece of the map/i]); },
