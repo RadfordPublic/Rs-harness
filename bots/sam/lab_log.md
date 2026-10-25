@@ -35,3 +35,36 @@
 
 ### Possible SDK Bugs or Improvements:
 - None filed; the failures above were script timing/position issues, not SDK bugs.
+
+## Session 2 (2026-10-25): quest points toward Dragon Slayer and Lost City
+
+### Goals
+- 32 quest points (Champions' Guild, Dragon Slayer), then Lost City for the dragon longsword.
+- Stopped the cow farm at 490 kills: Att/Str/Def 70, and hides/beef sell for 0gp.
+
+### Observations
+- Quest points come from `^<quest>_questpoints` constants under server/content (no SDK API for %qp).
+  Running total: 8 -> Restless Ghost 9 -> Witch's Potion 10 -> Vampire Slayer 13.
+- `find_spawn.ts` reads NPC/loc/obj spawns from the server map files. Use it before guessing coords:
+  the wiki pages have no coordinates for most NPCs (e.g. Father Urhney is at (3235, 3153), not the swamp hut).
+- Read the quest's .rs2 for dialog options; `chat()` just needs regexes for the right ones.
+- Recurring pattern: a use/operate sent during an animation is dropped silently (hopper, coffin).
+  Wait 2 ticks and retry until the inventory or a game message confirms it.
+- `lib.ts` `climb` now prefers reachable stairs and accepts "Climb down"/"Walk-Down" style options.
+- Restless Ghost: skull at (3120, 9567) in the Wizards' Tower basement; the ladder back is out of scan
+  range from there, so walk to (3104, 9575) first.
+- Witch's Potion: at Cooking 30+ beef never burns on a range. Imps drop burnt meat (4/128). The
+  Rimmington rats are all in a locked house; Lumbridge castle rats work.
+- Imp beads are 5/128 each and imps are spread out: 24 kills in 25 min gave red + white only.
+  Imp Catcher is parked until black + yellow turn up.
+- Goblin Diplomacy starts with the Rusty Anchor bartender (Port Sarim), not the generals. Goblin mail
+  took 79 goblin kills for 3. Woad: Wyson, "How about 20 coins?" gives 2. Redberries are ground spawns SE
+  of Varrock. Generals' hut has a large door on the south side.
+- Vampire Slayer: Dr Harlow is in the Jolly Boar (3277, 3492), beer from its bartender. Manor crypt
+  stairs are "Walk-Down" at (3115, 3357). Exit by the east wing doors.
+- Demon Slayer: all keys are named "Key". Palace L2 (Rovin) is via the spiral stairs at (3202, 3497)
+  from the ground floor. Fill the bucket at the palace kitchen sink (3224, 3494) beside the drain; the
+  washed key despawns in ~2 min, so go straight down the manhole (3237, 3458). The Wizards' Tower
+  stairs are past the east and inner doors; leaving needs both doors opened by hand.
+- Black Knights' Fortress disguise: iron chainbody 210gp (Horvik / Wayne), bronze med helm (one lies
+  on the floor in Draynor Manor). Money is the bottleneck for this and Dragon Slayer.

@@ -39,15 +39,18 @@ export function helpers(bot: BotActions, sdk: BotSDK) {
     async function talk(npc: RegExp, prefer: RegExp[] = []) {
         const r = await bot.talkTo(npc);
         console.log(`talk ${npc}: ${r.success ? 'ok' : r.message}`);
-        if (r.success) await chat(prefer);
-        return r.success;
+        // talkTo can give up just before a slow dialog opens, so give it a few more ticks.
+        const opened = r.success || await sdk.waitForCondition(s => s.dialog.isOpen, 3_000).then(() => true, () => false);
+        if (opened) await chat(prefer);
+        return opened;
     }
 
     async function climb(dir: 'up' | 'down', name = /ladder|staircase/i) {
-        const opt = dir === 'up' ? /climb-up/i : /climb-down/i;
+        const opt = dir === 'up' ? /(climb|walk)[- ]up/i : /(climb|walk)[- ]down/i;
         const locs = await sdk.scanNearbyLocs(15);
+        // Nearest reachable one first; a closer staircase behind a wall is a common trap.
         const stairs = locs.filter(l => name.test(l.name) && l.optionsWithIndex.some(o => opt.test(o.text)))
-            .sort((a, b) => a.distance - b.distance)[0];
+            .sort((a, b) => Number(b.reachable !== false) - Number(a.reachable !== false) || a.distance - b.distance)[0];
         if (!stairs) { console.log(`nothing to climb ${dir}`); return false; }
         const before = sdk.getState()!.player;
         await bot.interactLoc(stairs, opt);
