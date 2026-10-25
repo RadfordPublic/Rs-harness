@@ -58,7 +58,7 @@ await runScript(async ({ bot, sdk }) => {
 
         async gypsy() { await climbTo(0); await h.walk(ARIS, 'gypsy'); await h.talk(/^gypsy|aris/i, CHOICES); },
 
-        async prysin() { await climbTo(0); await h.walk(PRYSIN, 'prysin'); await h.talk(/prysin/i, CHOICES); },
+        async prysin() { await climbTo(0); await leaveTower(); await h.walk(PRYSIN, 'prysin'); await h.talk(/prysin/i, CHOICES); },
 
         // Rovin's floor is only reached by the spiral stairs in the palace's north-west corner.
         async rovin() {

@@ -68,3 +68,19 @@
   stairs are past the east and inner doors; leaving needs both doors opened by hand.
 - Black Knights' Fortress disguise: iron chainbody 210gp (Horvik / Wayne), bronze med helm (one lies
   on the floor in Draynor Manor). Money is the bottleneck for this and Dragon Slayer.
+- Quest points: ... 13 -> Demon Slayer 16 -> Goblin Diplomacy 21 -> Druidic Ritual 25 ->
+  Black Knights' Fortress 28 -> Witch's House **32**. Champions' Guild and Dragon Slayer are open.
+- Demon Slayer bones: Traiborn counts them one at a time; Lumbridge cows, 22 + 3 in two trips.
+- Druidic Ritual meats all come from around Lumbridge (cow, chicken pen, giant rats SW of the castle,
+  bears at ~(3168, 3228)). The Taverley Dungeon cauldron is past the prison door; it worked first try.
+- Black Knights' Fortress (`black_knights_fortress.ts`): the grill is reached via the secret wall at
+  (3016, 3517), ladders up and over, the Sturdy door (3025, 3511) and the ladder down at (3021, 3510).
+  **Don't open the Sturdy door from inside**: it aggros every knight; sam fell to 16 HP with no food.
+  The cabbage hole is reached from the meeting room instead ("I don't care. I'm going in anyway."):
+  ladder (3022, 3518) up, the L1 corridor east, then push the wall at (3030, 3510) from its north side.
+  Reward 2500gp.
+- Witch's House (`witchs_house.ts`): Nora T. Hagg patrols row z=3463 (x 2904..2930) and only catches
+  you north/south of her within 3 tiles, so travel along her row and time the doors. She caught sam
+  twice (once undoing the mouse door, once taking the ball). After the shapeshifter is dead the shed
+  opens without the key and the ball can be picked up again (`STEP=reball`).
+- Cooked beef from the banked raw beef is the food supply (`cook_food.ts`, Port Sarim range).
