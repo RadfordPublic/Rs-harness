@@ -1,0 +1,6 @@
+# Bot credentials never go in git (this repo may be public)
+bots/**/bot.env
+bots/**/*.env
+
+node_modules/
+.DS_Store

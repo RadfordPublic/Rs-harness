@@ -1,0 +1,3 @@
+[submodule "rs-sdk"]
+	path = rs-sdk
+	url = https://github.com/MaxBittker/rs-sdk.git
