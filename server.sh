@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Runs your own game server: engine (http://localhost:8888) + gateway
-# (ws://localhost:7780). Ctrl+C stops both. Bots must be created with --local:
-#   ./setup.sh mybot --local
+# (ws://localhost:7780). Ctrl+C stops both. New bots point here by default:
+#   ./setup.sh mybot
 set -euo pipefail
 cd "$(dirname "$0")/rs-sdk/server"
 

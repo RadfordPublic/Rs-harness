@@ -1,5 +1,5 @@
 # One-time setup: fetches rs-sdk, installs deps, restores saved bots,
-# and optionally creates a new bot.   Usage: .\setup.ps1 [botname] [--local]
+# and optionally creates a new bot.   Usage: .\setup.ps1 [botname] [--demo]
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 
@@ -15,12 +15,22 @@ if (-not (Get-Command bun -ErrorAction SilentlyContinue)) {
 }
 
 Run git @('submodule', 'update', '--init', '--recursive')
+# create-bot.ts edits bots/_template with "\n"-anchored replacements, which miss
+# under autocrlf. Keep the template LF so --local writes the right ports.
+Run git @('-C', 'rs-sdk', 'config', 'core.autocrlf', 'false')
+Remove-Item rs-sdk\bots\_template\* -Force
+Run git @('-C', 'rs-sdk', 'checkout', '--', 'bots/_template')
 Push-Location rs-sdk; try { Run bun @('install') } finally { Pop-Location }
 Push-Location rs-sdk\server\webclient; try { Run bun @('install') } finally { Pop-Location }
 Run bun @('tools/bots-sync.ts', 'restore')
 
 if ($args.Count -gt 0) {
-    Push-Location rs-sdk; try { Run bun (@('bots/create-bot.ts') + $args) } finally { Pop-Location }
+    # New bots point at the local server unless --demo or --server= says otherwise.
+    $botArgs = @($args | Where-Object { $_ -ne '--demo' })
+    if (-not ($args | Where-Object { $_ -eq '--demo' -or $_ -eq '--local' -or $_ -like '--server=*' })) {
+        $botArgs += '--local'
+    }
+    Push-Location rs-sdk; try { Run bun (@('bots/create-bot.ts') + $botArgs) } finally { Pop-Location }
     Run bun @('tools/bots-sync.ts', 'save')
 }
 

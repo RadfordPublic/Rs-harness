@@ -18,7 +18,7 @@ scripts and notes stay in this repo.
 # Windows (PowerShell)
 git clone --recurse-submodules https://github.com/RadfordPublic/Rs-harness.git
 cd Rs-harness
-.\setup.ps1 mybotname          # bot name: up to 12 letters/numbers, must be unused on the demo server
+.\setup.ps1 mybotname          # bot name: up to 12 letters/numbers, unique on its server
 ```
 
 ```sh
@@ -28,8 +28,8 @@ cd Rs-harness
 ./setup.sh mybotname
 ```
 
-Leave out the bot name to just install. Add `--local` to point the bot at a local server instead of
-the public demo server (`rs-sdk-demo.fly.dev`).
+Leave out the bot name to just install. New bots point at your local server (`server.ps1`, see
+below) by default; add `--demo` to use the public demo server (`rs-sdk-demo.fly.dev`) instead.
 
 If PowerShell blocks the scripts, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once.
 
@@ -87,7 +87,7 @@ run faster than the demo server.
 
 ```powershell
 .\server.ps1                    # or ./server.sh. Leave it running.
-.\setup.ps1 mybot --local       # in another terminal: a bot that points at localhost
+.\setup.ps1 mybot               # in another terminal: bots point at localhost by default
 .\play.ps1                      # play as normal
 ```
 
@@ -97,6 +97,6 @@ second window on Windows, or in the background on Linux/macOS.
 
 - **Faster game:** set `NODE_TICKRATE=200` (or as low as `30`) in `rs-sdk/server/engine/.env`, or
   type `::speed 100` in-game. The default is 400 ms per tick.
-- **Bots are per server.** A demo-server bot doesn't exist on your local server. Create a separate
-  one with `--local`, or change `SERVER=` to `localhost:8888` in its `bot.env`.
+- **Bots are per server.** A local bot doesn't exist on the demo server and vice versa. Create a
+  separate one with `--demo` for the demo server, or edit `SERVER=` in its `bot.env`.
 - Local accounts and saves are kept in `rs-sdk/server/engine/data/`.

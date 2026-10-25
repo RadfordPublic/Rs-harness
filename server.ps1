@@ -1,6 +1,6 @@
 # Runs your own game server: engine (http://localhost:8888) + gateway
 # (ws://localhost:7780). The gateway opens in its own window; close both to stop.
-# Bots must be created with --local:   .\setup.ps1 mybot --local
+# New bots point here by default:   .\setup.ps1 mybot
 $ErrorActionPreference = 'Stop'
 Set-Location "$PSScriptRoot\rs-sdk\server"
 
