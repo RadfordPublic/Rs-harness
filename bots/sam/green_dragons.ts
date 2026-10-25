@@ -7,6 +7,7 @@ import { helpers } from './lib';
 // (3078..3118, 3810..3821), respawn 60 ticks. Level 79, 75 HP, weakest to stab (stab def 20, slash/crush 40).
 // The anti-dragon shield ("Dragonfire shield", antidragonbreathshield) caps the fire; without it the
 // breath can hit 50. Every kill drops dragon bones + a hide (plain "Dragonhide" here): bury the bones, bank the hides.
+// Protect from Melee only while fighting; prayer is topped up at the Edgeville monastery altar each trip.
 // Banks at Edgeville. Leaves when food runs low or the inventory fills. Progress in dragon_progress.json.
 //   FOOD=18 TRIPS=1 bun bots/sam/green_dragons.ts
 const FOOD = Number(process.env.FOOD ?? 18);
@@ -15,6 +16,9 @@ const EAT_AT = Number(process.env.EAT_AT ?? 50);
 const LEAVE_FOOD = 3;
 
 const BANK = { x: 3094, z: 3492 };                     // Edgeville
+// Monastery altar upstairs (3051, 3498, L1): ladder (3057, 3483). Joining the order (Prayer 31) is asked at the ladder.
+const MONASTERY_LADDER = { x: 3057, z: 3484 };
+const ALTAR = { x: 3052, z: 3497 };
 const LAIR = { x: 3098, z: 3814 };
 const ROUTE_OUT = [{ x: 3094, z: 3530 }, { x: 3090, z: 3620 }, { x: 3092, z: 3720 }, LAIR];
 const ROUTE_BACK = [{ x: 3092, z: 3720 }, { x: 3090, z: 3620 }, { x: 3094, z: 3530 }, BANK];
@@ -88,6 +92,36 @@ await runScript(async ({ bot, sdk }) => {
         return true;
     }
 
+    const prayer = () => sdk.getSkill('Prayer')!;
+    async function protect(on: boolean) {
+        if (on && prayer().level === 0) return;
+        for (let i = 0; i < 4 && sdk.isPrayerActive('protect_from_melee') !== on; i++) {
+            await sdk.sendTogglePrayer('protect_from_melee');
+            await sdk.waitForTicks(1);
+        }
+    }
+
+    // Top up prayer at the Edgeville monastery altar.
+    async function recharge() {
+        if (prayer().level >= prayer().baseLevel) return;
+        await h.walk(MONASTERY_LADDER, 'monastery ladder', 1);
+        for (let i = 0; i < 3 && me().level === 0; i++) {
+            const ladder = (await sdk.scanNearbyLocs(4)).find(l => /ladder/i.test(l.name) && l.optionsWithIndex.some(o => /climb/i.test(o.text)));
+            if (!ladder) { await h.scan('no monastery ladder'); return; }
+            await bot.interactLoc(ladder, /climb[- ]up/i);
+            await sdk.waitForCondition(s => s.player.level === 1 || s.dialog.isOpen, 6_000).catch(() => {});
+            if (sdk.getState()!.dialog.isOpen) await h.chat([/can i join your order/i]);   // first visit: join the order
+        }
+        if (me().level !== 1) { console.log('could not get up the monastery ladder'); return; }
+        await h.walk(ALTAR, 'altar', 1);
+        const altar = (await sdk.scanNearbyLocs(5)).find(l => /altar/i.test(l.name) && l.optionsWithIndex.some(o => /pray/i.test(o.text)));
+        if (altar) await bot.interactLoc(altar, /pray/i);
+        await sdk.waitForCondition(() => prayer().level >= prayer().baseLevel, 8_000).catch(() => {});
+        console.log(`prayer ${prayer().level}/${prayer().baseLevel}`);
+        await h.walk(MONASTERY_LADDER, 'ladder top', 1);
+        await h.climb('down', /ladder/i);
+    }
+
     async function gearUp() {
         if (h.has(SHIELD)) console.log('shield:', (await bot.equipItem(SHIELD)).success);
         for (const w of [/^silverlight$/i, /longsword$/i, /scimitar$/i]) if (sdk.findInventoryItem(w)) { await bot.equipItem(w); break; }
@@ -98,6 +132,10 @@ await runScript(async ({ bot, sdk }) => {
     }
 
     async function hunt() {
+        try { return await huntLoop(); } finally { await protect(false); }
+    }
+
+    async function huntLoop() {
         let misses = 0;
         while (misses < 40) {
             if (me().isDead) return 'dead';
@@ -115,6 +153,7 @@ await runScript(async ({ bot, sdk }) => {
                 .filter(n => /^green dragon$/i.test(n.name) && !n.inCombat && n.hp !== 0 && inLair(n.x, n.z) && n.reachable !== false)
                 .sort((a, b) => a.distance - b.distance)[0];
             if (!d) { misses++; await sdk.waitForTicks(5); continue; }
+            await protect(true);
             const r = await bot.attack(d);
             if (!r.success) { misses++; await sdk.waitForTicks(2); continue; }
             misses = 0;
@@ -127,11 +166,13 @@ await runScript(async ({ bot, sdk }) => {
                 dead = true;
                 return true;
             }, 90_000).catch(() => {});
+            // Off between fights so the points last the trip.
+            if (dead || !me().combat.inCombat) await protect(false);
             if (dead) {
                 p.kills++;
                 await loot(tx, tz);
                 save();
-                console.log(`kill ${p.kills}: hp ${me().hp}, food ${h.count(/^lobster$/i)}, hides ${h.count(/^dragonhide$/i)}`);
+                console.log(`kill ${p.kills}: hp ${me().hp}, food ${h.count(/^lobster$/i)}, hides ${h.count(/^dragonhide$/i)}, prayer ${prayer().level}`);
             }
         }
         return 'no dragons';
@@ -141,6 +182,7 @@ await runScript(async ({ bot, sdk }) => {
     for (let trip = 0; trip < TRIPS; trip++) {
         if (!inLair(me().worldX, me().worldZ)) {
             if (!(await bank())) break;
+            await recharge();
             await gearUp();
             if (!sdk.getEquipment().some(e => SHIELD.test(e.name))) { console.log('no anti-dragon shield worn: not going'); break; }
             if (h.count(/^lobster$/i) < 6) { console.log('not enough lobsters banked'); break; }

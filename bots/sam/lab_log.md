@@ -148,4 +148,11 @@
 - Green dragons (`green_dragons.ts`), from the server data: only 5 spawn, (3078, 3810), (3092, 3810),
   (3098, 3821), (3107, 3812) and (3118, 3820), around Wilderness level 37. Level 79, 75 HP, attack,
   strength and defence 68. Stab defence is 20 (slash and crush 40), so use a stab style. Respawn is
-  60 ticks. Every kill drops dragon bones + a green dragonhide.
+  60 ticks. Every kill drops dragon bones + a hide, whose item name is plain "Dragonhide" (the first
+  trip missed every one because the loot regex said "green dragonhide").
+- Green dragon trips (`green_dragons.ts`): Edgeville bank -> monastery altar -> straight north to the
+  lair, no trouble on the way. Without prayer a kill costs ~4-5 lobsters; with Protect from Melee
+  it cost 1. A full prayer (66) only lasts about one fight, though. Trip 2: 3 kills, 3 hides
+  banked, 3 bones buried, 0 deaths on 12 lobsters. **Food is the limit:** about 7 kills so far on 30 lobsters.
+- Edgeville monastery altar (3051, 3498, L1), up the ladder at (3057, 3483). The first climb asks
+  you to join the order ("Well can I join your order?", Prayer 31+). It recharges to base + 2.
