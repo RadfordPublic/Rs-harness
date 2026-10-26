@@ -58,10 +58,22 @@ await runScript(async ({ bot, sdk }) => {
             // The green dragon trips bank the lobster pot; grab it from whichever bank is nearest.
             if (!h.has(/lobster pot/i)) {
                 const o = await bot.openBank();
-                if (o.success) { await bot.withdrawItem(/^lobster pot$/i, 1).catch(() => {}); await bot.closeBank(); }
+                if (o.success) {
+                    // Empty the inventory (the dragon trips leave lobsters in it) so every slot fishes.
+                    for (const n of [...new Set(sdk.getInventory().map(i => i.name))]) {
+                        await bot.depositItem(new RegExp(`^${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i'), -1);
+                    }
+                    await bot.withdrawItem(/^lobster pot$/i, 1).catch(() => {});
+                    await bot.closeBank();
+                }
                 console.log('lobster pot:', h.has(/lobster pot/i));
             }
-            for (const p of ROUTE) if (!(await h.walk(p, `${p.x},${p.z}`, 3))) { await h.scan('stuck'); return; }
+            // From Edgeville the first leg is long; walkTo gives up after 2 minutes, so retry.
+            for (const p of ROUTE) {
+                let ok = false;
+                for (let i = 0; i < 6 && !(ok = await h.walk(p, `${p.x},${p.z}`, 3)); i++);
+                if (!ok) { await h.scan('stuck'); throw new Error('stuck on the way to Catherby'); }
+            }
         },
 
         async buy() {

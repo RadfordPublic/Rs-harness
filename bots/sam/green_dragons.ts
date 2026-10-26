@@ -59,19 +59,31 @@ await runScript(async ({ bot, sdk }) => {
         }
     }
 
-    async function loot(x: number, z: number) {
-        const near = (g: { x: number; z: number; name: string }) => LOOT.test(g.name) && Math.abs(g.x - x) <= 3 && Math.abs(g.z - z) <= 3;
-        await sdk.waitForCondition(s => s.groundItems.some(near), 6_000).catch(() => {});
-        for (let i = 0; i < 6; i++) {
-            const item = sdk.getState()!.groundItems.filter(near)
+    // Every kill's drop spot stays here until it's picked clean, so a dragon that jumps sam mid-loot
+    // doesn't cost the drop: huntLoop comes back to it before picking a new fight.
+    const drops: { x: number; z: number }[] = [];
+    const isDrop = (g: { x: number; z: number; name: string }) =>
+        LOOT.test(g.name) && drops.some(d => Math.abs(g.x - d.x) <= 3 && Math.abs(g.z - d.z) <= 3);
+
+    async function loot() {
+        for (let i = 0, fails = 0; i < 30 && fails < 5; i++) {
+            const item = sdk.getState()!.groundItems.filter(isDrop)
                 .sort((a, b) => Number(/bones/i.test(b.name)) - Number(/bones/i.test(a.name)))[0];
             if (!item) break;
-            // Make room for a hide by eating if need be.
-            if (h.freeSlots() === 0 && h.has(/^lobster$/i) && me().hp < me().maxHp - 12) await bot.eatFood(/^lobster$/i);
-            if (h.freeSlots() === 0) break;
-            await bot.pickupItem(item);
+            if (me().isDead) return;
+            if (me().combat.inCombat) await protect(true);
+            if (me().hp < EAT_AT && h.has(/^lobster$/i)) await bot.eatFood(/^lobster$/i);
+            // Make room by eating a lobster; a hide is worth more than a lobster.
+            if (h.freeSlots() === 0 && h.has(/^lobster$/i)) await bot.eatFood(/^lobster$/i);
+            if (h.freeSlots() === 0) { console.log(`inventory full, leaving ${item.name}`); break; }
+            const n = sdk.getInventory().reduce((t, i) => t + i.count, 0);
+            const r = await bot.pickupItem(item);
+            if (!r.success || sdk.getInventory().reduce((t, i) => t + i.count, 0) === n) fails++;
             if (/bones/i.test(item.name)) await buryBones();
         }
+        const left = sdk.getState()!.groundItems.filter(isDrop);
+        if (left.length) console.log('loot left:', left.map(g => g.name).join(', '));
+        drops.length = 0;
     }
 
     async function bank() {
@@ -89,7 +101,8 @@ await runScript(async ({ bot, sdk }) => {
         if (need > 0) await bot.withdrawItem(/^lobster$/i, need).catch(() => {});
         await bot.closeBank();
         save();
-        console.log(`banked ${hides} hides | food ${h.count(/^lobster$/i)} | ${report()}`);
+        const inBank = sdk.getBankItems().filter(i => /^lobster$/i.test(i.name)).reduce((n, i) => n + i.count, 0);
+        console.log(`banked ${hides} hides | food ${h.count(/^lobster$/i)}, lobsters in bank ${inBank} | ${report()}`);
         return true;
     }
 
@@ -145,6 +158,7 @@ await runScript(async ({ bot, sdk }) => {
                 await bot.eatFood(/^lobster$/i);
                 continue;
             }
+            if (drops.length) await loot();   // finish an interrupted loot before the next fight or leaving
             if (h.count(/^lobster$/i) < LEAVE_FOOD && !me().combat.inCombat) return 'food low';
             if (h.freeSlots() === 0 && !h.has(/^lobster$/i)) return 'full';
             if (!inLair(me().worldX, me().worldZ)) { await h.walk(LAIR, 'lair', 4); continue; }
@@ -171,7 +185,9 @@ await runScript(async ({ bot, sdk }) => {
             if (dead || !me().combat.inCombat) await protect(false);
             if (dead) {
                 p.kills++;
-                await loot(tx, tz);
+                drops.push({ x: tx, z: tz });
+                await sdk.waitForCondition(st => st.groundItems.some(isDrop), 6_000).catch(() => {});
+                await loot();
                 save();
                 console.log(`kill ${p.kills}: hp ${me().hp}, food ${h.count(/^lobster$/i)}, hides ${h.count(/^dragonhide$/i)}, prayer ${prayer().level}`);
             }
@@ -182,6 +198,7 @@ await runScript(async ({ bot, sdk }) => {
     console.log('start:', report());
     for (let trip = 0; trip < TRIPS; trip++) {
         if (!inLair(me().worldX, me().worldZ)) {
+            await gearUp();   // swap the staff out first so the bank keeps it out of the Wilderness
             if (!(await bank())) break;
             await recharge();
             await gearUp();

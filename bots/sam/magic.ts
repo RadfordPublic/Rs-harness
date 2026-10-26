@@ -6,7 +6,7 @@ import { helpers } from './lib';
 // the boosted level) for its nature runes (1000 stock, 20gp). Cheapest XP here is Curse (29xp, x25)
 // with a staff of earth: 2 water + 1 body per cast, ~11gp. Shop prices rise 1% per rune under base
 // stock and restock 1 per 10 ticks, so buy only while near base price and wait otherwise.
-//   STEP=dhide (Al Kharid: 3 dragonhides -> body) | oziach (sell it) | staff (Zaff) | train TARGET=64
+//   STEP=dhide (Al Kharid: 3 dragonhides -> body) | alch (high alch them, staff of fire) | oziach (sell it) | staff (Zaff) | train TARGET=64
 //   STEP=demon SPELL=earth_strike: safespot the Wizards' Tower lesser demon over its railing, runes from Betty
 const STEP = process.env.STEP ?? 'train';
 const TARGET = Number(process.env.TARGET ?? 64);
@@ -42,23 +42,7 @@ await runScript(async ({ bot, sdk }) => {
     const xpFor = (lvl: number) => { let p = 0; for (let l = 1; l < lvl; l++) p += Math.floor(l + 300 * 2 ** (l / 7)); return Math.floor(p / 4); };
     const rune = (r: string) => new RegExp(`^${r} rune$`, 'i');
     const casts = () => Math.min(...Object.entries(SPELL.runes).map(([r, n]) => Math.floor(h.count(rune(r)) / n)));
-    // Al Kharid behind the toll gate (3268, 3227/3228); the pathfinder won't pay it, so far() does.
-    const inKharid = (p: { x: number; z: number }) => p.x >= 3268 && p.z >= 3110 && p.z <= 3330;
-    async function crossGate() {
-        const inside = inKharid({ x: sdk.getState()!.player.worldX, z: sdk.getState()!.player.worldZ });
-        await far({ x: inside ? 3269 : 3266, z: 3228 }, 'toll gate', 1, false);
-        const gate = (await sdk.scanNearbyLocs(5)).find(l => /gate/i.test(l.name) && l.x === 3268);
-        if (!gate) throw new Error('toll gate not found');
-        await bot.interactLoc(gate, 1);
-        await sdk.waitForCondition(s => s.dialog.isOpen, 5_000).catch(() => {});
-        await h.chat([/^yes, ok/i]);
-        await sdk.waitForCondition(s => (s.player.worldX >= 3268) !== inside, 10_000).catch(() => {});
-        if ((sdk.getState()!.player.worldX >= 3268) === inside) throw new Error(`toll gate: still ${inside ? 'in' : 'outside'} Al Kharid`);
-    }
-
-    async function far(t: { x: number; z: number }, label: string, tol = 2, gate = true) {
-        const me = sdk.getState()!.player;
-        if (gate && inKharid({ x: me.worldX, z: me.worldZ }) !== inKharid(t)) await crossGate();
+    async function far(t: { x: number; z: number }, label: string, tol = 2) {
         for (let i = 0; i < 15 && !(await h.walk(t, label, tol)); i++);   // Yanille is a long walk
     }
 
@@ -150,6 +134,32 @@ await runScript(async ({ bot, sdk }) => {
             const r = await bot.sellToShop(/d'?hide body|dragonhide body/i, process.env.SELL ? Number(process.env.SELL) : 'all');
             await bot.closeShop();
             console.log(`sold body: ${r.success} ${r.message ?? ''} +${coins() - before}gp | coins ${coins()}`);
+        },
+
+        // High alch the dragonhide bodies with a staff of fire (1 nature rune each, 4680gp vs Oziach's 3120).
+        // Runs at the Al Kharid bank after dhide; the dragon script banks the staff, natures and coins again.
+        async alch() {
+            const body = /^dragonhide body$/i, staff = /^staff of fire$/i;
+            if (!h.has(body)) { console.log('no bodies to alch'); return; }
+            if (!sdk.getEquipment().some(e => staff.test(e.name)) || !h.has(/^nature rune$/i)) {
+                await far(KHARID_BANK, 'al kharid bank');
+                await bot.openBank();
+                if (!h.has(/^nature rune$/i)) await bot.withdrawItem(/^nature rune$/i, -1);
+                if (!h.has(staff) && !sdk.getEquipment().some(e => staff.test(e.name))) await bot.withdrawItem(staff, 1);
+                await bot.closeBank();
+                if (h.has(staff)) await bot.equipItem(staff);
+            }
+            if (!sdk.getEquipment().some(e => staff.test(e.name))) throw new Error('no staff of fire');
+            let alched = 0;
+            for (let it = sdk.findInventoryItem(body); it && h.has(/^nature rune$/i); it = sdk.findInventoryItem(body)) {
+                const before = coins();
+                await sdk.sendSpellOnItem(it.slot, Spells.HIGH_ALCHEMY);
+                await sdk.waitForCondition(() => coins() > before, 5_000).catch(() => {});
+                if (coins() === before) { await h.scan('alch did nothing'); break; }
+                alched++;
+                await sdk.waitForTicks(3);   // alchemy has a 5-tick delay
+            }
+            console.log(`alched ${alched} bodies | natures ${h.count(/^nature rune$/i)} | coins ${coins()} | magic ${magic()}`);
         },
 
         async staff() {

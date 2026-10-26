@@ -11,7 +11,26 @@ export function helpers(bot: BotActions, sdk: BotSDK) {
     const freeSlots = () => 28 - sdk.getInventory().length;
     const messages = () => sdk.getState()!.gameMessages.map(m => m.text);
 
+    // Al Kharid sits behind the toll gate (3268, 3227/3228). The pathfinder won't pay the 10gp,
+    // so any walk that crosses it goes to the gate, opens it and says yes first.
+    const inKharid = (p: Pt) => p.x >= 3268 && p.z >= 3110 && p.z <= 3330;
+    async function crossGate() {
+        const me = () => sdk.getState()!.player;
+        const inside = inKharid({ x: me().worldX, z: me().worldZ });
+        for (let i = 0; i < 6 && !(await bot.walkTo(inside ? 3269 : 3266, 3228, 1)).success; i++);
+        const gate = (await sdk.scanNearbyLocs(5)).find(l => /gate/i.test(l.name) && l.x === 3268);
+        if (!gate) throw new Error(`toll gate not found from ${pos()}`);
+        await bot.interactLoc(gate, 1);
+        await sdk.waitForCondition(s => s.dialog.isOpen, 5_000).catch(() => {});
+        await chat([/^yes, ok/i]);
+        await sdk.waitForCondition(s => (s.player.worldX >= 3268) !== inside, 10_000).catch(() => {});
+        if ((me().worldX >= 3268) === inside) throw new Error(`toll gate: still ${inside ? 'in' : 'outside'} Al Kharid (coins ${count(/^coins$/i)})`);
+        console.log(`through the toll gate: ${pos()}`);
+    }
+
     async function walk(t: Pt, label: string, tolerance = 3) {
+        const p = sdk.getState()!.player;
+        if (p.level === 0 && inKharid({ x: p.worldX, z: p.worldZ }) !== inKharid(t)) await crossGate();
         const r = await bot.walkTo(t.x, t.z, tolerance);
         console.log(`walk ${label}: ${r.success ? 'ok' : r.message} now ${pos()}`);
         return r.success;
