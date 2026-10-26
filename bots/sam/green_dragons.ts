@@ -99,9 +99,10 @@ await runScript(async ({ bot, sdk }) => {
         if (!h.has(SHIELD) && !sdk.getEquipment().some(e => SHIELD.test(e.name))) await bot.withdrawItem(SHIELD, 1).catch(() => {});
         const need = FOOD - h.count(/^lobster$/i);
         if (need > 0) await bot.withdrawItem(/^lobster$/i, need).catch(() => {});
+        // Bank contents are only readable while the bank is open.
+        const inBank = sdk.getBankItems().filter(i => /^lobster$/i.test(i.name)).reduce((n, i) => n + i.count, 0);
         await bot.closeBank();
         save();
-        const inBank = sdk.getBankItems().filter(i => /^lobster$/i.test(i.name)).reduce((n, i) => n + i.count, 0);
         console.log(`banked ${hides} hides | food ${h.count(/^lobster$/i)}, lobsters in bank ${inBank} | ${report()}`);
         return true;
     }
