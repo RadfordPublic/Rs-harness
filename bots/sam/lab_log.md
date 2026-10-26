@@ -166,3 +166,19 @@
   - The general store pays about 17-28gp per body. It paid for the tanning, ending with 2487gp.
   - 390 cowhides are left in the bank, plus 25 Hardleather bodies.
   - Next is dragonhide: vambraces at 57, chaps at 60, body at 63. Tanning is 20gp per hide.
+- Magic 35 -> 63 and the Magic Guild's nature runes (`magic.ts`):
+  - 3 green hides: tanned in Al Kharid (the item is "Dragon leather"), then the needle on the leather
+    opens a make menu with a "Green body" option. That body sold to Oziach for 3120gp. His Trade
+    option first asks "Can I buy a rune plate mail body now please?".
+  - Bought a staff of earth from Zaff for 1500.
+  - Curse on Varrock townsfolk worked, but slowly.
+  - Faster is the caged Lesser demon on the top floor of the Wizards' Tower (3110, 3157, L2). Cast
+    from (3110, 3160): the pen's railing has `blockrange=no`. The walls do block, so a cast from the
+    west side gets "I can't reach that!".
+  - Earth Strike (1 air + 1 mind with the staff) from Betty in Port Sarim, about 11gp a cast. It gave
+    roughly 1500 XP per cast and took sam from Magic 48 to 63 in about 90 casts.
+  - The guild door checks the boosted level against 66. A Wizard's mind bomb (Rising Sun barmaid,
+    "I'll try the Mind Bomb.", 2gp) gives +2 plus 2%, so Magic 63 is enough.
+  - The store is the Magic Store owner upstairs (2595, 3087, L1), not Wizard Distentor. Nature runes
+    there are 20gp with 1000 in stock. 1225gp bought 50, leaving 142gp.
+  - Inside the tower, doors close behind you, so the way out opens the nearest closed door and retries.
