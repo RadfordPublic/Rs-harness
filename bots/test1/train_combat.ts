@@ -39,4 +39,4 @@ await runScript(async ({ bot, sdk }) => {
         if (++kills % 5 === 0) console.log(`kills ${kills}: ${report()}`);
     }
     console.log('done:', report(), `kills ${kills}`);
-}, { timeout: 30 * 60_000 });
+}, { timeout: Number(process.env.MINUTES ?? 30) * 60_000 });

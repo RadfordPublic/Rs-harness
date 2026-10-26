@@ -65,5 +65,23 @@ export function helpers(bot: BotActions, sdk: BotSDK) {
         console.log('npcs:', sdk.getNearbyNpcs().map(n => `${n.name}@${n.x},${n.z}`).slice(0, 20).join(', '));
     }
 
-    return { pos, count, has, freeSlots, messages, walk, chat, talk, climb, scan };
+    // Cross the Al Kharid toll gate (x 3268, z 3227-3228; x >= 3268 is the Al Kharid side) towards
+    // `side`, paying the border guard 10gp from the inventory. The walk to the gate can already
+    // land on the far side, so check before paying.
+    async function tollGate(side: 'east' | 'west') {
+        const there = () => (sdk.getState()!.player.worldX >= 3268) === (side === 'east');
+        if (there()) return true;
+        await walk({ x: side === 'east' ? 3267 : 3268, z: 3227 }, 'toll gate', 1);
+        if (there()) return true;
+        if (count(/^coins$/i) < 10) { console.log('toll gate: need 10gp in the inventory'); return false; }
+        const gate = (await sdk.scanNearbyLocs(5)).find(l => /^gate$/i.test(l.name));
+        if (!gate) { await scan('no toll gate', 5); return false; }
+        await bot.interactLoc(gate, /open/i);
+        await chat([/^yes, ok/i]);
+        await sdk.waitForCondition(() => there(), 10_000).catch(() => {});
+        console.log(`toll gate: now ${pos()}`);
+        return there();
+    }
+
+    return { pos, count, has, freeSlots, messages, walk, chat, talk, climb, scan, tollGate };
 }
