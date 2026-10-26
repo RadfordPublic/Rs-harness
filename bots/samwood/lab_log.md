@@ -63,6 +63,9 @@
   alch works on bank notes, so take the bows as notes and alternate buy natures / alch there:
   74 bows -> 16,959gp. Nature runes climb ~1% per rune bought: 270 cost ~16.7k (~62 avg).
 - Yew longbow loop: 12 per batch -> 9,216gp (768 each). Magic 66 -> 78 from alching so far.
+- Over ~20h the loop alched ~1,900 yew longbows (Magic 99, ~1.46M gp banked). Natures bought
+  300 at a time cost ~50gp each. A live server script reload ("Packing changes") left bogus
+  collision south of Seers' bank (bot boxed into a few tiles); restarting the server fixed it.
 
 ### Next Steps
 - `seers.ts STEP=loop` runs the yew longbow loop forever and fetches natures from Yanille when

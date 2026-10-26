@@ -256,4 +256,4 @@ await runScript(async ({ bot, sdk }) => {
     if (STEP === 'all' || STEP === 'yanille') await yanilleTrip();
     if (STEP === 'all' || STEP === 'loop') await alchLoop();
     console.log(`done: Fletching ${lvl('Fletching')}, Crafting ${lvl('Crafting')}, ${h.pos()}`);
-}, { timeout: 8 * 60 * 60_000 });
+}, { timeout: STEP === 'loop' ? undefined : 8 * 60 * 60_000 });   // the alch loop runs until stopped
