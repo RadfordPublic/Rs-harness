@@ -4,7 +4,7 @@ import { helpers } from './lib';
 // Lobsters for Elvarg, all in Catherby: Harry's shop (net, lobster pot), net/bait spots to train,
 // cage spots for lobsters, range and bank next door. XP is in tenths in fishing.struct and 25x here:
 // shrimp 250, anchovies 1000 (Fishing 15), lobster 2250 (Fishing 40).
-//   STEP=go | buy | train | lobsters N=26 | all
+//   STEP=go | buy | train | lobsters N=26 | all | run (go + lobsters, for a trained fisher)
 // go: Falador -> Taverley -> over White Wolf Mountain -> Catherby.
 const STEP = process.env.STEP ?? 'all';
 const N = Number(process.env.N ?? 26);          // cooked lobsters wanted in the bank
@@ -55,6 +55,12 @@ await runScript(async ({ bot, sdk }) => {
 
     const steps: Record<string, () => Promise<void>> = {
         async go() {
+            // The green dragon trips bank the lobster pot; grab it from whichever bank is nearest.
+            if (!h.has(/lobster pot/i)) {
+                const o = await bot.openBank();
+                if (o.success) { await bot.withdrawItem(/^lobster pot$/i, 1).catch(() => {}); await bot.closeBank(); }
+                console.log('lobster pot:', h.has(/lobster pot/i));
+            }
             for (const p of ROUTE) if (!(await h.walk(p, `${p.x},${p.z}`, 3))) { await h.scan('stuck'); return; }
         },
 
@@ -104,7 +110,11 @@ await runScript(async ({ bot, sdk }) => {
         },
     };
 
-    if (STEP === 'all') {
+    if (STEP === 'run') {          // already trained: just fetch the pot, go and fish
+        await steps.go();
+        if (!h.has(/lobster pot/i)) await steps.buy();
+        await steps.lobsters();
+    } else if (STEP === 'all') {
         await steps.go();
         await steps.buy();
         await steps.train();

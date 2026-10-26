@@ -156,3 +156,13 @@
   banked, 3 bones buried, 0 deaths on 12 lobsters. **Food is the limit:** about 7 kills so far on 30 lobsters.
 - Edgeville monastery altar (3051, 3498, L1), up the ladder at (3057, 3483). The first climb asks
   you to join the order ("Well can I join your order?", Prayer 31+). It recharges to base + 2.
+- Crafting 34 -> 65 in Al Kharid (`crafting.ts`), on 75 cowhides (3 inventories plus a test one,
+  about 30 minutes):
+  - Tanner: the Trade option opens the tanning screen; component 8690 tans every hide into hard leather.
+  - Using the needle on hard leather makes a body straight away, with no menu. The item is named "Hardleather body".
+  - A spool of thread lasts 5 bodies. Dommik sells thread and needles.
+  - The toll gate costs 10gp, and sam once arrived with 0 coins, so the script banks at Draynor first.
+  - walkTo from Catherby gives up after 2 minutes, so long walks need retries.
+  - The general store pays about 17-28gp per body. It paid for the tanning, ending with 2487gp.
+  - 390 cowhides are left in the bank, plus 25 Hardleather bodies.
+  - Next is dragonhide: vambraces at 57, chaps at 60, body at 63. Tanning is 20gp per hide.
