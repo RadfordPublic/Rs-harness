@@ -182,3 +182,10 @@
   - The store is the Magic Store owner upstairs (2595, 3087, L1), not Wizard Distentor. Nature runes
     there are 20gp with 1000 in stock. 1225gp bought 50, leaving 142gp.
   - Inside the tower, doors close behind you, so the way out opens the nearest closed door and retries.
+
+## Green dragon trip -> staff of fire
+- Bank (checked from Yanille with `bank_check.ts`): 120 lobsters, 390 cowhides, 25 hardleather bodies, 15 nature runes.
+- One trip: 3 kills, 3 hides, no deaths, 16 lobsters eaten. Protect from Melee ran dry by the second kill.
+- 3 hides -> green Dragonhide body (Crafting 66) -> Oziach 3120gp -> staff of fire from Zaff (1500), wielded. 1858gp left.
+- Gotcha: the pathfinder won't pay the Al Kharid toll gate in either direction. `far()` in magic.ts now crosses it itself;
+  the dhide step also fetches coins from Draynor if sam arrives broke (the dragon bank deposits everything).

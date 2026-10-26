@@ -14,10 +14,12 @@ const MAX_PRICE = Number(process.env.MAX_PRICE ?? 1.5);   // x base cost
 const RESERVE = 150;                                      // keep for tolls/food
 
 const KHARID_BANK = { x: 3269, z: 3167 };
+const DRAYNOR_BANK = { x: 3092, z: 3245 };    // coins for the 10gp toll gate
 const TANNER = { x: 3275, z: 3192 };
 const TAN_GREEN_ALL = 8695;                    // tanner:com_103
 const OZIACH = { x: 3068, z: 3516 };
 const ZAFF = { x: 3203, z: 3432 };
+const STAFF = process.env.STAFF ?? 'earth';      // STAFF=fire for high alchemy
 const AUBURY = { x: 3253, z: 3401 };
 const SPOT = { x: 3253, z: 3410 };             // outside Aubury's: east Varrock street
 const BARMAID = { x: 2957, z: 3371 };          // Rising Sun Inn, Falador
@@ -40,7 +42,23 @@ await runScript(async ({ bot, sdk }) => {
     const xpFor = (lvl: number) => { let p = 0; for (let l = 1; l < lvl; l++) p += Math.floor(l + 300 * 2 ** (l / 7)); return Math.floor(p / 4); };
     const rune = (r: string) => new RegExp(`^${r} rune$`, 'i');
     const casts = () => Math.min(...Object.entries(SPELL.runes).map(([r, n]) => Math.floor(h.count(rune(r)) / n)));
-    async function far(t: { x: number; z: number }, label: string, tol = 2) {
+    // Al Kharid behind the toll gate (3268, 3227/3228); the pathfinder won't pay it, so far() does.
+    const inKharid = (p: { x: number; z: number }) => p.x >= 3268 && p.z >= 3110 && p.z <= 3330;
+    async function crossGate() {
+        const inside = inKharid({ x: sdk.getState()!.player.worldX, z: sdk.getState()!.player.worldZ });
+        await far({ x: inside ? 3269 : 3266, z: 3228 }, 'toll gate', 1, false);
+        const gate = (await sdk.scanNearbyLocs(5)).find(l => /gate/i.test(l.name) && l.x === 3268);
+        if (!gate) throw new Error('toll gate not found');
+        await bot.interactLoc(gate, 1);
+        await sdk.waitForCondition(s => s.dialog.isOpen, 5_000).catch(() => {});
+        await h.chat([/^yes, ok/i]);
+        await sdk.waitForCondition(s => (s.player.worldX >= 3268) !== inside, 10_000).catch(() => {});
+        if ((sdk.getState()!.player.worldX >= 3268) === inside) throw new Error(`toll gate: still ${inside ? 'in' : 'outside'} Al Kharid`);
+    }
+
+    async function far(t: { x: number; z: number }, label: string, tol = 2, gate = true) {
+        const me = sdk.getState()!.player;
+        if (gate && inKharid({ x: me.worldX, z: me.worldZ }) !== inKharid(t)) await crossGate();
         for (let i = 0; i < 15 && !(await h.walk(t, label, tol)); i++);   // Yanille is a long walk
     }
 
@@ -79,9 +97,17 @@ await runScript(async ({ bot, sdk }) => {
 
     const steps: Record<string, () => Promise<void>> = {
         async dhide() {
+            if (sdk.getState()!.player.worldX < 3268 && coins() < 50) {
+                await far(DRAYNOR_BANK, 'draynor bank');
+                await bot.openBank();
+                await bot.withdrawItem(/^coins$/i, -1);
+                await bot.closeBank();
+                console.log('coins for the gate:', coins());
+            }
             await far(KHARID_BANK, 'al kharid bank');
             await bot.openBank();
             await bot.withdrawItem(/^dragonhide$/i, -1);
+            if (coins() < 600) await bot.withdrawItem(/^coins$/i, -1);   // tanning, 20gp a hide
             if (!h.has(/^needle$/i)) await bot.withdrawItem(/^needle$/i, 1);
             if (!h.has(/^thread$/i)) await bot.withdrawItem(/^thread$/i, -1);
             await bot.closeBank();
@@ -94,7 +120,7 @@ await runScript(async ({ bot, sdk }) => {
             await bot.closeInterface();
             console.log('leather:', h.count(/dragon leather/i), '| coins', coins());
             // craftLeather only knows "Green dragon leather"; the item here is plain "Dragon leather".
-            for (let i = 0; i < 5 && h.count(/dragon leather/i) >= 3; i++) {
+            for (let i = 0; i < 9 && h.count(/dragon leather/i) >= 3; i++) {
                 const needle = sdk.findInventoryItem(/^needle$/i)!, leather = sdk.findInventoryItem(/dragon leather/i)!;
                 await sdk.sendUseItemOnItem(needle.slot, leather.slot);
                 await sdk.waitForCondition(s => s.dialog.isOpen || !!s.interface?.isOpen, 5_000).catch(() => {});
@@ -121,21 +147,22 @@ await runScript(async ({ bot, sdk }) => {
             await sdk.waitForCondition(s => s.shop.isOpen, 8_000).catch(() => {});
             if (!sdk.getState()!.shop.isOpen) { await h.scan('oziach shop'); return; }
             const before = coins();
-            const r = await bot.sellToShop(/d'?hide body|dragonhide body/i, 'all');
+            const r = await bot.sellToShop(/d'?hide body|dragonhide body/i, process.env.SELL ? Number(process.env.SELL) : 'all');
             await bot.closeShop();
             console.log(`sold body: ${r.success} ${r.message ?? ''} +${coins() - before}gp | coins ${coins()}`);
         },
 
         async staff() {
-            if (sdk.getEquipment().some(e => /staff of earth/i.test(e.name))) return;
-            if (!h.has(/^staff of earth$/i)) {
+            const staff = new RegExp(`^staff of ${STAFF}$`, 'i');
+            if (sdk.getEquipment().some(e => staff.test(e.name))) return;
+            if (!h.has(staff)) {
                 await far(ZAFF, 'zaff');
                 const o = await bot.openShop(/^zaff$/i);
                 if (!o.success) throw new Error(`zaff: ${o.message}`);
-                console.log('staff:', (await bot.buyFromShop(/^staff of earth$/i, 1)).success, '| coins', coins());
+                console.log(`staff of ${STAFF}:`, (await bot.buyFromShop(staff, 1)).success, '| coins', coins());
                 await bot.closeShop();
             }
-            console.log('wield staff:', (await bot.equipItem(/^staff of earth$/i)).success);
+            console.log('wield staff:', (await bot.equipItem(staff)).success);
         },
 
         // Top floor of the Wizards' Tower: a caged Lesser demon (npc 82) at (3110, 3157, L2).

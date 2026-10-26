@@ -75,7 +75,8 @@ await runScript(async ({ bot, sdk }) => {
     }
 
     async function bank() {
-        await h.walk(BANK, 'edgeville bank');
+        // Long walk if sam starts far away (walkTo gives up after 2 minutes).
+        for (let i = 0; i < 10 && !(await h.walk(BANK, 'edgeville bank')); i++);
         const o = await bot.openBank();
         if (!o.success) { console.log('bank failed:', o.message); return false; }
         const hides = h.count(/^dragonhide$/i);
